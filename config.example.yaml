@@ -1,0 +1,8 @@
+# 复制本文件为 config.api.yaml，然后填入元宝 Cookie
+# 纯 API 模式：不启代理、不改系统代理
+proxy:
+  enabled: false
+  system: false
+  tun: false
+cloudflare:
+  sphCookie: ''

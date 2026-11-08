@@ -1,0 +1,9 @@
+config.api.yaml
+downloads/
+*.mp4
+*.exe
+*.log
+data.db*
+__pycache__/
+*.pyc
+.DS_Store

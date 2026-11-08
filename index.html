@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>视频号下载器</title>
+<style>
+:root{
+  --bg:#0d1020; --panel:#171b2e; --panel2:#1e2338; --line:#2a3050;
+  --text:#eef1ff; --muted:#9aa3c7; --primary:#6d6df6; --primary2:#9b5cf6;
+  --ok:#34d399; --warn:#fbbf24; --err:#f87171;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1100px 620px at 15% -10%,#2a2c66 0%,transparent 60%),
+     radial-gradient(900px 520px at 95% 0%,#3b215e 0%,transparent 55%),var(--bg);
+     color:var(--text);font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;min-height:100vh}
+.wrap{max-width:960px;margin:0 auto;padding:38px 22px 70px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:26px}
+h1{font-size:30px;letter-spacing:.5px;margin:0 0 8px;font-weight:700;
+   background:linear-gradient(100deg,#fff 10%,#b8a8ff 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--muted);font-size:14px}
+.badges{display:flex;gap:9px;flex-wrap:wrap}
+.badge{font-size:12px;padding:7px 13px;border-radius:999px;background:var(--panel2);
+       border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.badge b{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted);margin-right:7px;vertical-align:1px}
+.badge.on b{background:var(--ok);box-shadow:0 0 9px var(--ok)}
+.badge.off b{background:var(--err);box-shadow:0 0 9px var(--err)}
+.card{background:linear-gradient(160deg,rgba(255,255,255,.045),rgba(255,255,255,.012));
+      border:1px solid var(--line);border-radius:18px;padding:22px;margin-bottom:20px;
+      box-shadow:0 18px 45px rgba(0,0,0,.28)}
+.card h2{font-size:16px;margin:0 0 14px;font-weight:600;display:flex;align-items:center;gap:9px}
+.card h2 .num{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,var(--primary),var(--primary2));
+              font-size:12px;display:inline-flex;align-items:center;justify-content:center}
+textarea{width:100%;background:#0f1324;border:1px solid var(--line);color:var(--text);border-radius:12px;
+         padding:15px 16px;font-size:14px;line-height:1.7;resize:vertical;outline:none;transition:.2s;font-family:inherit}
+textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(109,109,246,.16)}
+textarea::placeholder{color:#6b739a}
+#links{min-height:112px}
+#cookie{min-height:78px;font-size:12px}
+.hint{font-size:12px;color:var(--muted);margin:10px 0 16px;line-height:1.7}
+.hint code{background:var(--panel2);padding:2px 7px;border-radius:5px;color:#c7b8ff}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+button{border:0;border-radius:11px;padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer;
+       transition:.18s;font-family:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line)}
+button:hover{transform:translateY(-1px);border-color:#4a5388}
+button:active{transform:translateY(0)}
+button.primary{background:linear-gradient(110deg,var(--primary),var(--primary2));border:0;
+               box-shadow:0 8px 22px rgba(109,109,246,.32);padding:11px 28px}
+button.primary:hover{box-shadow:0 10px 28px rgba(109,109,246,.48)}
+button.ghost{background:transparent}
+button.small{padding:7px 13px;font-size:12px;border-radius:9px}
+button:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.list{display:flex;flex-direction:column;gap:11px;margin-top:4px}
+.item{background:var(--panel2);border:1px solid var(--line);border-radius:13px;padding:14px 16px}
+.item .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.title{font-size:14px;font-weight:600;word-break:break-all;line-height:1.5}
+.meta{font-size:12px;color:var(--muted);margin-top:5px;word-break:break-all}
+.state{font-size:12px;padding:4px 10px;border-radius:999px;white-space:nowrap;flex:none;
+       background:rgba(154,163,199,.12);color:var(--muted)}
+.state.done{background:rgba(52,211,153,.14);color:var(--ok)}
+.state.error{background:rgba(248,113,113,.14);color:var(--err)}
+.state.downloading,.state.parsing{background:rgba(109,109,246,.16);color:#b8b3ff}
+.bar{height:6px;background:#0d1020;border-radius:99px;overflow:hidden;margin-top:12px}
+.bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--primary),var(--primary2));
+       transition:width .4s ease;position:relative}
+.bar i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
+              animation:flow 1.4s linear infinite}
+@keyframes flow{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:11px;flex-wrap:wrap}
+.empty{color:var(--muted);font-size:13px;text-align:center;padding:24px 0}
+.fileitem{display:flex;justify-content:space-between;align-items:center;gap:12px;
+          background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 15px}
+.fileitem .fname{font-size:13px;word-break:break-all}
+.fileitem .fmeta{font-size:11px;color:var(--muted);margin-top:4px}
+details{background:transparent;border:1px solid var(--line);border-radius:18px;padding:0 22px;margin-bottom:20px}
+summary{cursor:pointer;padding:17px 0;font-size:15px;font-weight:600;list-style:none;display:flex;justify-content:space-between}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"展开";font-size:12px;color:var(--muted);font-weight:400}
+details[open] summary::after{content:"收起"}
+.settings{padding-bottom:20px;border-top:1px solid var(--line);padding-top:18px}
+#toast{position:fixed;right:24px;bottom:24px;background:var(--panel);border:1px solid var(--line);
+       color:var(--text);padding:13px 19px;border-radius:12px;font-size:13px;box-shadow:0 14px 40px rgba(0,0,0,.45);
+       opacity:0;transform:translateY(14px);transition:.25s;pointer-events:none;max-width:360px;z-index:9}
+#toast.show{opacity:1;transform:translateY(0)}
+#toast.bad{border-color:var(--err)}
+.tip{font-size:12px;color:var(--muted);line-height:1.8;margin-top:14px}
+@media(max-width:640px){.wrap{padding:24px 14px 50px}h1{font-size:24px}header{align-items:flex-start}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>视频号下载器</h1>
+      <div class="sub">粘贴分享链接即可下载，无需微信页面按钮 · 仅在本机运行</div>
+    </div>
+    <div class="badges">
+      <span class="badge" id="b-api"><b></b>服务</span>
+      <span class="badge" id="b-parse"><b></b>解析</span>
+      <span class="badge" id="b-cookie"><b></b>Cookie</span>
+    </div>
+  </header>
+
+  <div class="card">
+    <h2><span class="num">1</span>粘贴链接</h2>
+    <textarea id="links" placeholder="粘贴 https://weixin.qq.com/sph/... 分享链接&#10;支持一次粘贴多行，每行一个链接"></textarea>
+    <div class="hint">也支持 <code>finder.video.qq.com</code> 等视频直链。Cookie 过期后，在下方「设置」里更新即可。</div>
+    <div class="row">
+      <button class="primary" id="btn-start">开始下载</button>
+      <button id="btn-paste">从剪贴板粘贴</button>
+      <button class="ghost" id="btn-clear">清空</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="num">2</span>下载任务 <span class="sub" id="queued" style="font-weight:400;font-size:12px"></span></h2>
+    <div class="list" id="tasks"><div class="empty">还没有任务</div></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="num">3</span>已下载文件</h2>
+    <div class="row" style="margin-bottom:14px"><button class="small" id="btn-folder">打开下载文件夹</button></div>
+    <div class="list" id="files"><div class="empty">暂无文件</div></div>
+  </div>
+
+  <details>
+    <summary>设置与维护</summary>
+    <div class="settings">
+      <div class="hint" style="margin-top:0">解析分享链接需要 <code>yuanbao.tencent.com</code> 的登录 Cookie，有效期约 1 个月。过期后登录元宝网页，F12 → Network 复制完整 Cookie 请求头粘贴到这里保存。</div>
+      <textarea id="cookie" placeholder="粘贴新的 Cookie（留空不会保存）"></textarea>
+      <div class="row" style="margin-top:12px">
+        <button class="small" id="btn-save">保存并重启服务</button>
+        <button class="small ghost" id="btn-restart">仅重启服务</button>
+      </div>
+      <div class="tip">应用只监听 127.0.0.1，Cookie 保存在本机 config.api.yaml，不会外传；请勿把该文件提交到公开仓库。</div>
+    </div>
+  </details>
+</div>
+<div id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+let filesCache = [];
+
+function toast(msg, bad){
+  const t = $('toast');
+  t.textContent = msg; t.className = bad ? 'show bad' : 'show';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.className = '', 3200);
+}
+function fmt(n){ return n >= 1048576 ? (n/1048576).toFixed(1)+' MB' : (n/1024).toFixed(0)+' KB'; }
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+const STATE = {queued:'排队中',parsing:'解析中',downloading:'下载中',done:'完成',error:'失败'};
+
+async function post(url, body){
+  const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const j = await r.json().catch(() => ({error:'返回格式异常'}));
+  if(!r.ok || j.error) throw new Error(j.error || '请求失败');
+  return j;
+}
+
+function badge(id, ok, label){
+  const el = $(id);
+  el.className = 'badge ' + (ok ? 'on' : 'off');
+  el.innerHTML = '<b></b>' + label + (ok ? '正常' : '异常');
+}
+
+async function refreshStatus(){
+  try{
+    const s = await (await fetch('/api/status')).json();
+    badge('b-api', s.api, '服务');
+    badge('b-parse', s.parse, '解析');
+    badge('b-cookie', s.cookie, 'Cookie');
+    $('queued').textContent = s.queued ? `（排队 ${s.queued} 个）` : '';
+  }catch(e){ badge('b-api', false, '服务'); }
+}
+
+async function refreshTasks(){
+  try{
+    const {tasks} = await (await fetch('/api/tasks')).json();
+    const box = $('tasks');
+    if(!tasks.length){ box.innerHTML = '<div class="empty">还没有任务</div>'; return; }
+    box.innerHTML = tasks.map(t => `
+      <div class="item">
+        <div class="top">
+          <div>
+            <div class="title">${esc(t.title || t.url)}</div>
+            <div class="meta">${esc(t.message || STATE[t.status] || '')}${t.author ? ' · ' + esc(t.author) : ''}${t.total ? ' · ' + fmt(t.total) : ''}</div>
+          </div>
+          <span class="state ${esc(t.status)}">${esc(STATE[t.status] || t.status)}</span>
+        </div>
+        ${t.status !== 'queued' ? `<div class="bar"><i style="width:${t.progress||0}%"></i></div>` : ''}
+        <div class="foot">
+          <span class="meta" style="margin:0">${t.downloaded ? fmt(t.downloaded) : ''} ${t.progress ? '· ' + t.progress + '%' : ''}</span>
+          ${t.file && t.status === 'done' ? `<button class="small" onclick="openPath(${JSON.stringify(t.file)})">打开视频</button>` : ''}
+        </div>
+      </div>`).join('');
+  }catch(e){}
+}
+
+async function refreshFiles(){
+  try{
+    const {files} = await (await fetch('/api/files')).json();
+    filesCache = files;
+    const box = $('files');
+    if(!files.length){ box.innerHTML = '<div class="empty">暂无文件</div>'; return; }
+    box.innerHTML = files.map(f => `
+      <div class="fileitem">
+        <div><div class="fname">${esc(f.name)}</div><div class="fmeta">${fmt(f.size)} · ${esc(f.time)}</div></div>
+        <button class="small" onclick="openPath(${JSON.stringify(f.path)})">打开</button>
+      </div>`).join('');
+  }catch(e){}
+}
+
+async function start(){
+  const urls = $('links').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  if(!urls.length){ toast('请先粘贴链接', true); return; }
+  const btn = $('btn-start'); btn.disabled = true;
+  try{
+    const r = await post('/api/download', {urls});
+    toast(`已加入 ${r.ids.length} 个下载任务`);
+    $('links').value = '';
+    refreshTasks();
+  }catch(e){ toast(e.message, true); }
+  finally{ btn.disabled = false; }
+}
+
+async function paste(){
+  try{
+    const text = await navigator.clipboard.readText();
+    if(!text.trim()){ toast('剪贴板为空', true); return; }
+    const box = $('links');
+    box.value = box.value.trim() ? box.value.trim() + '\n' + text.trim() : text.trim();
+    toast('已粘贴');
+  }catch(e){ toast('浏览器拒绝读取剪贴板，请按 Ctrl+V 粘贴', true); }
+}
+
+async function openPath(p){
+  try{ await post('/api/open', {path:p}); }
+  catch(e){ toast(e.message, true); }
+}
+
+$('btn-start').onclick = start;
+$('btn-paste').onclick = paste;
+$('btn-clear').onclick = () => { $('links').value = ''; $('links').focus(); };
+$('links').addEventListener('keydown', e => { if(e.ctrlKey && e.key === 'Enter') start(); });
+$('btn-folder').onclick = async () => {
+  try{
+    const s = await (await fetch('/api/status')).json();
+    await openPath(s.dir);
+  }catch(e){ toast(e.message, true); }
+};
+$('btn-save').onclick = async () => {
+  const cookie = $('cookie').value.trim();
+  if(!cookie){ toast('请先粘贴 Cookie', true); return; }
+  const btn = $('btn-save'); btn.disabled = true; btn.textContent = '保存中...';
+  try{
+    const r = await post('/api/cookie', {cookie});
+    $('cookie').value = '';
+    toast(r.ready ? 'Cookie 已保存，服务已重启' : '已保存，但服务未就绪，请点「仅重启服务」', !r.ready);
+    refreshStatus();
+  }catch(e){ toast(e.message, true); }
+  finally{ btn.disabled = false; btn.textContent = '保存并重启服务'; }
+};
+$('btn-restart').onclick = async () => {
+  const btn = $('btn-restart'); btn.disabled = true; btn.textContent = '重启中...';
+  try{ const r = await post('/api/restart', {}); toast(r.ready ? '服务已重启' : '服务未就绪，请检查日志', !r.ready); refreshStatus(); }
+  catch(e){ toast(e.message, true); }
+  finally{ btn.disabled = false; btn.textContent = '仅重启服务'; }
+};
+
+refreshStatus(); refreshTasks(); refreshFiles();
+setInterval(refreshStatus, 4000);
+setInterval(() => { refreshTasks(); refreshFiles(); }, 1200);
+</script>
+</body>
+</html>
